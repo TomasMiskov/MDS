@@ -63,7 +63,7 @@ fnRawStress <- function(mDS, mX, vW = rep(1, sum(seq(1,nrow(mX)-1)))){
 }
 
 #--------------------------------------------------------------------------
-#' Normalized Stress Function
+#' Kruskal's Stress Function
 #' 
 #' Compute normalized Kruskal's stress
 #' 
@@ -84,6 +84,23 @@ fnKruskalStress <- function(mDS, mX, vW = rep(1, sum(seq(1,nrow(mX)-1)))){
 }
 
 #--------------------------------------------------------------------------
+#' Normalized Stress Function
+#' 
+#' Compute normalized Normalized stress
+#' 
+#' @param mDS The input dissimilarity matrix
+#' @param mX N x p matrix of MDS distances between observations in X
+#' @param vW Vector of weights, defaults to vector of 1s
+fnNormalStress <- function(mDS, mX, vW = rep(1, sum(seq(1,nrow(mX)-1)))){
+  
+  #compute raw stress
+  dRawStress <- fnRawStress(mDS, mX, vW)
+  dNormalStress <- sqrt(dRawStress / t(vW) %*% (mDS[lower.tri(mDS)]^2))
+  
+  return(dNormalStress)
+}
+
+#--------------------------------------------------------------------------
 #' MDS Majorization Function
 #' 
 #' Majorize the stress loss function to obtain MDS given a dissimilarity matrix
@@ -101,7 +118,7 @@ fnMDS <- function(mDS, vW = rep(1, sum(seq(1,nrow(mX)-1))), iP,
     mInit <- matrix(runif(iN*iP, -1, 1), nrow = iN, ncol = iP) 
   }
   mX <- scale(mInit, scale = FALSE)     #column center initial X
-  dStress <- fnRawStress(mDS, mX, vW)   #compute initial stress value
+  dStress <- fnNormalStress(mDS, mX, vW)   #compute initial stress value
   dStressDelta <- dStress               #temporary delta stress value
   
   mJ <- diag(iN) - iN^-1 * (rep(1, iN) %*% t(rep(1, iN)))  #centering matrix
@@ -124,8 +141,8 @@ fnMDS <- function(mDS, vW = rep(1, sum(seq(1,nrow(mX)-1))), iP,
     mX <- mVinv %*% mBy %*% mY                     #updating X
     
     #COMPUTING NEW STRESS
-    dStressY <- fnKruskalStress(mDS, mY, vW)       #normalized stress iter (k-1)
-    dStressX <- fnKruskalStress(mDS, mX, vW)       #normalized stress iter (k)
+    dStressY <- fnNormalStress(mDS, mY, vW)       #normalized stress iter (k-1)
+    dStressX <- fnNormalStress(mDS, mX, vW)       #normalized stress iter (k)
     dStressDelta <- dStressY - dStressX            #normalized stress delta
     
     if(!bSilent){
@@ -134,7 +151,7 @@ fnMDS <- function(mDS, vW = rep(1, sum(seq(1,nrow(mX)-1))), iP,
     }
   }
   return(list("conf" = mX, "confdist" = fnEucDistMatrix(mX), 
-              "stress" = fnKruskalStress(mDS, mX, vW)[[1]],
+              "stress" = fnNormalStress(mDS, mX, vW)[[1]],
               "iter" = k, "init" = mInit))
 }
 
